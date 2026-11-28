@@ -6,7 +6,7 @@ pipeline {
   }
 
   stages {
-    stage('Clone') {
+    stage('Clone Repository') {
       steps {
         git branch: 'main', url: 'https://github.com/follabm25-dev/smart-library-.git'
       }
@@ -18,12 +18,21 @@ pipeline {
       }
     }
 
-    stage('Push to Docker Hub') {
+    stage('Push Docker Image') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials',
             usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
           sh 'echo $DH_PASS | docker login -u $DH_USER --password-stdin'
           sh 'docker push $IMAGE:latest'
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+          sh 'kubectl apply -f k8s-deployment.yaml'
+          sh 'kubectl rollout restart deployment/smart-library'
         }
       }
     }
